@@ -167,12 +167,11 @@ func runRootCommand(cmd *cobra.Command, args []string) {
 	authManager := auth.NewAuthManager(&cfg)
 	
 	// 6. Get authenticated client
-	fmt.Println("Getting authenticated Kite client...")
+	fmt.Println("Authenticating with Kite...")
 	kiteClient, err := authManager.GetClient()
 	if err != nil {
-		log.Fatalf("Failed to get authenticated client: %v", err)
+		log.Fatalf("Failed to authenticate with Kite: %v", err)
 	}
-	fmt.Println("Successfully obtained authenticated Kite client")
 	
 	// 7. Initialize instrument manager
 	instrumentManager := instruments.NewInstrumentManager(&cfg)

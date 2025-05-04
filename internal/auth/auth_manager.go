@@ -36,100 +36,85 @@ func NewAuthManager(config *config.Config) *AuthManager {
 // Login generates an access token for the broker API
 func (am *AuthManager) Login() (AuthCredentialsResult, error) {
 	var creds AuthCredentialsResult
-	var authMethodUsed string
-	
-	fmt.Println("==== Authentication Debug ====")
-	fmt.Printf("Config values - Auth Service URL: %s, API Key: %s, Session Token: %v\n", 
-		am.config.Auth.AuthServiceURL, 
-		am.config.Auth.ApiKey, 
-		am.config.Auth.SessionToken != "")
 	
 	// First try to get credentials from auth service if configured
 	if am.authClient != nil && am.config.Auth.BrokerName != "" {
-		fmt.Println("Attempting to get credentials from auth service...")
+		// Try to get credentials from the auth service
+		fmt.Println("==== AUTH SERVICE DEBUG ====")
+		fmt.Printf("AuthServiceURL: %s\n", am.config.Auth.AuthServiceURL)
+		fmt.Printf("AuthServiceAPIKey: %s\n", am.config.Auth.AuthServiceAPIKey)
+		fmt.Printf("BrokerName: %s\n", am.config.Auth.BrokerName)
+		
+		// Make the request to the auth service with detailed logging
+		fmt.Println("Calling auth service...")
 		credentials, err := am.authClient.GetBrokerCredentials(am.config.Auth.BrokerName)
+		
 		if err != nil {
-			fmt.Printf("Failed to get credentials from auth service: %v. Will try direct credentials.\n", err)
+			// Auth service returned an error
+			fmt.Printf("AUTH SERVICE ERROR: %v\n", err)
 		} else {
-			// Validate credentials from auth service
+			// Check if credentials are valid
+			fmt.Printf("Received credentials - API Key: %s\n", credentials.ApiKey)
+			fmt.Printf("Session Token present: %v\n", credentials.SessionToken != "")
+			fmt.Printf("Is Active: %v\n", credentials.IsActive)
+			
 			if credentials.ApiKey != "" && credentials.SessionToken != "" {
-				fmt.Println("Using credentials from auth service")
-				authMethodUsed = "auth_service"
-				
 				// Set up the KiteConnect client with auth service credentials
 				fmt.Printf("Setting up KiteConnect client with API key: %s\n", credentials.ApiKey)
 				am.kite = kiteconnect.New(credentials.ApiKey)
-				fmt.Printf("Setting access token: %s...\n", credentials.SessionToken[:5])
+				
+				// Set the access token
+				fmt.Println("Setting the access token...")
 				am.kite.SetAccessToken(credentials.SessionToken)
+				
+				// Return the credentials
+				fmt.Println("AUTH SERVICE AUTHENTICATION SUCCESSFUL")
+				fmt.Println("==== END AUTH SERVICE DEBUG ====")
 				
 				creds = AuthCredentialsResult{
 					ApiKey:       credentials.ApiKey,
 					SessionToken: credentials.SessionToken,
 				}
+				return creds, nil
 			} else {
-				fmt.Println("Auth service returned incomplete credentials (missing API key or session token)")
+				fmt.Println("AUTH SERVICE RETURNED INCOMPLETE CREDENTIALS")
 			}
 		}
+		fmt.Println("==== END AUTH SERVICE DEBUG ====")
 	}
 
 	// If auth service failed or wasn't configured, try direct credentials
-	if authMethodUsed == "" && am.config.Auth.ApiKey != "" && am.config.Auth.SessionToken != "" {
-		fmt.Println("Using direct credentials from config")
-		authMethodUsed = "direct_config"
+	if am.config.Auth.ApiKey != "" && am.config.Auth.SessionToken != "" {
+		fmt.Println("Falling back to direct credentials...")
 		
 		// Set up the KiteConnect client with direct credentials
-		fmt.Printf("Setting up KiteConnect client with API key: %s\n", am.config.Auth.ApiKey)
 		am.kite = kiteconnect.New(am.config.Auth.ApiKey)
-		
-		fmt.Printf("Setting access token from config: %s...\n", am.config.Auth.SessionToken[:5])
 		am.kite.SetAccessToken(am.config.Auth.SessionToken)
 		
 		creds = AuthCredentialsResult{
 			ApiKey:       am.config.Auth.ApiKey,
 			SessionToken: am.config.Auth.SessionToken,
 		}
+		return creds, nil
 	}
 
 	// If no credentials were set, return an error
-	if authMethodUsed == "" {
-		fmt.Println("No valid credentials available!")
-		return AuthCredentialsResult{}, fmt.Errorf("no valid credentials available; please set API key and session token in config or ensure auth_service is working")
-	}
-	
-	// Verify the client was properly initialized
-	if am.kite == nil {
-		fmt.Println("Failed to initialize KiteConnect client!")
-		return AuthCredentialsResult{}, fmt.Errorf("failed to initialize KiteConnect client")
-	}
-	
-	fmt.Printf("Successfully authenticated using %s\n", authMethodUsed)
-	fmt.Println("==== End Authentication Debug ====")
-	return creds, nil
+	return AuthCredentialsResult{}, fmt.Errorf("no valid credentials available; please set API key and session token in config or ensure auth_service is working")
 }
 
 // GetClient returns the authenticated KiteConnect client
 func (am *AuthManager) GetClient() (*kiteconnect.Client, error) {
-	fmt.Println("GetClient called - forcing authentication...")
-	
-	// Force re-login every time for debugging
-	creds, err := am.Login()
+	// ALWAYS force reauthentication for debugging
+	fmt.Println("Forcing authentication...")
+	_, err := am.Login()
 	if err != nil {
-		fmt.Printf("Login failed with error: %v\n", err)
 		return nil, fmt.Errorf("failed to login before getting client: %w", err)
 	}
 	
 	// Double-check that we have a valid client
 	if am.kite == nil {
-		fmt.Println("KiteConnect client is nil after Login()")
 		return nil, fmt.Errorf("KiteConnect client was not properly initialized")
 	}
-	
-	// Debug logging
-	credSource := "auth service"
-	if creds.ApiKey == am.config.Auth.ApiKey {
-		credSource = "config"
-	}
-	fmt.Printf("Authentication successful with credentials from %s\n", credSource)
 	
 	return am.kite, nil
 }
