@@ -1,0 +1,37 @@
+auth:
+  # Authentication options
+  auth_service_url: "http://example.com:8001"
+  auth_service_api_key: "your-api-key"
+  broker_name: "zerodha"
+  
+  # Direct broker credentials (used if auth service unavailable)
+  api_key: ""
+  api_secret: ""
+  session_token: ""
+
+broker:
+  # Broker-specific settings
+  instruments_nse_url: "https://api.kite.trade/instruments/NSE"
+
+historical:
+  # Download parameters
+  interval: "minute"  # Can be "minute", "hour", "day"
+  days_to_fetch: 30   # How many days of history to fetch
+  request_delay: 500  # Milliseconds between requests
+  max_retries: 3      # Number of retries for failed requests
+  
+  # Output options
+  output_dir: "./historical_data"
+  parquet_enabled: false
+  parquet_dir: "./parquet_data"
+  
+  # Instruments path
+  instruments_path: "./instruments.csv"
+
+# List of symbols to download (used if --symbols or --symbol-file not provided)
+symbols:
+  - "NIFTY"
+  - "BANKNIFTY"
+  - "RELIANCE"
+  - "TCS"
+  - "INFY"

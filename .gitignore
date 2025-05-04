@@ -1,0 +1,34 @@
+# Binaries
+/kitedata
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+/vendor/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Config files with sensitive data
+.env
+config.yaml
+
+# Data files
+/historical_data/
+/parquet_data/
+/instruments.csv
+*.csv
+*.parquet
+.DS_Store
